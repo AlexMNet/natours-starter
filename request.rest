@@ -1,0 +1,32 @@
+//TOUR ROUTES 
+
+GET http://localhost:3000/api/v1/tours
+
+###
+
+GET http://localhost:3000/api/v1/users
+
+### 
+
+//SIGN UP USER!
+POST http://localhost:3000/api/v1/users/signup
+Content-Type: application/json
+
+{
+   "name": "Mike",
+   "email": "Mike@me.com",
+   "password": "test1234",
+   "passwordConfirm": "test1234"
+}
+
+###
+
+POST http://localhost:3000/api/v1/users/login
+Content-Type: application/json
+
+{
+   "name": "Mike",
+   "email": "Mike@me.com",
+   "password": "test1234",
+   "passwordConfirm": "test1234"
+}
