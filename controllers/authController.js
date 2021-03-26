@@ -11,12 +11,21 @@ const signToken = id => {
 };
 
 exports.signup = catchAsync(async (req, res, next) => {
-  const { name, email, password, passwordConfirm } = req.body;
+  const {
+    name,
+    email,
+    password,
+    passwordConfirm,
+    passwordChangedAt,
+    role
+  } = req.body;
   const newUser = await User.create({
     name,
     email,
     password,
-    passwordConfirm
+    passwordConfirm,
+    passwordChangedAt,
+    role
   });
 
   const token = signToken(newUser._id);
@@ -80,5 +89,25 @@ exports.protect = catchAsync(async (req, res, next) => {
   }
 
   //4 check if user changed password after the JWT was issued
+  if (freshUser.changedPasswordAfter(decoded.iat)) {
+    return next(
+      new AppError('User recently changed pasword! Please login again!')
+    );
+  }
+
+  //Grant access to protected route!
+  req.user = freshUser;
   next();
 });
+
+exports.restrictTo = (...roles) => {
+  return (req, res, next) => {
+    //roles ['admin', 'lead-guide'] role='user'
+    if (!roles.includes(req.user.role)) {
+      return next(
+        new AppError('You do not have permision to perform this action!', 403)
+      );
+    }
+    next();
+  };
+};
