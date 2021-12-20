@@ -12,8 +12,25 @@ const signToken = id => {
   });
 };
 
+const cookieOptions = {
+  expires: new Date(
+    Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
+  ),
+  //Cookie will only be sent on an encrypted conncection HTTPS
+  // secure: true,
+  //cookie will not be able to be modified or accessed by the browser helps prevent XSS attacks
+  httpOnly: true
+};
+
+if (process.env.NODE_ENV === 'production') cookieOptions.secure = true;
+
 const createSendToken = (user, statusCode, res) => {
   const token = signToken(user._id);
+
+  res.cookie('jwt', cookieOptions, token);
+
+  //Remove password from response output
+  user.password = undefined;
 
   res.status(statusCode).json({
     status: 'success',
