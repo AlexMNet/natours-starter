@@ -15,16 +15,16 @@ mongoose
   .then(() => console.log('DB Connection Successful!'));
 
 //READ JSON FILE
-const tours = JSON.parse(
-  fs.readFileSync(`${__dirname}/tours-simple.json`, 'utf-8')
-);
+const tours = JSON.parse(fs.readFileSync(`${__dirname}/tours.json`, 'utf-8'));
 
 //IMPORT DATA INTO DB
 const importData = async () => {
   try {
     await Tour.create(tours);
+    // eslint-disable-next-line no-console
     console.log('Data Successfully loaded...');
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.log(err);
   }
   process.exit();
@@ -34,8 +34,10 @@ const importData = async () => {
 const deleteData = async () => {
   try {
     await Tour.deleteMany();
+    // eslint-disable-next-line no-console
     console.log('Data Successfully deleted...');
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.log(err);
   }
   process.exit();
@@ -47,6 +49,7 @@ if (process.argv[2] === '--import') {
   deleteData();
 }
 
+// eslint-disable-next-line no-console
 console.log(process.argv);
 
 //How to run the cmd
