@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
@@ -10,14 +11,53 @@ const globalErrorHandler = require('./controllers/errorController');
 const tourRouter = require('./routes/tourRoutes');
 const userRouter = require('./routes/userRoutes');
 const reviewRouter = require('./routes/reviewRoutes');
+const viewRouter = require('./routes/viewRoutes');
 
 const app = express();
+app.set('view engine', 'pug');
+app.set('views', path.join(__dirname, 'views'));
+
+//Serve Static Files
+app.use(express.static(path.join(__dirname, 'public')));
 
 //============================= Middlewares
 // eslint-disable-next-line no-console
 
 //Set Security HTTP Headers
 app.use(helmet());
+
+//Add the following
+// Further HELMET configuration for Security Policy (CSP)
+const scriptSrcUrls = [
+  'https://api.tiles.mapbox.com/',
+  'https://api.mapbox.com/'
+];
+const styleSrcUrls = [
+  'https://api.mapbox.com/',
+  'https://api.tiles.mapbox.com/',
+  'https://fonts.googleapis.com/'
+];
+const connectSrcUrls = [
+  'https://api.mapbox.com/',
+  'https://a.tiles.mapbox.com/',
+  'https://b.tiles.mapbox.com/',
+  'https://events.mapbox.com/'
+];
+const fontSrcUrls = ['fonts.googleapis.com', 'fonts.gstatic.com'];
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: [],
+      connectSrc: ["'self'", ...connectSrcUrls],
+      scriptSrc: ["'self'", ...scriptSrcUrls],
+      styleSrc: ["'self'", "'unsafe-inline'", ...styleSrcUrls],
+      workerSrc: ["'self'", 'blob:'],
+      objectSrc: [],
+      imgSrc: ["'self'", 'blob:', 'data:'],
+      fontSrc: ["'self'", ...fontSrcUrls]
+    }
+  })
+);
 
 //Development logging
 // eslint-disable-next-line no-console
@@ -58,9 +98,6 @@ app.use(
   })
 );
 
-//Serve Static Files
-app.use(express.static(`${__dirname}/public`));
-
 app.use((req, res, next) => {
   next();
 });
@@ -76,6 +113,7 @@ app.use((req, res, next) => {
 // );
 
 //============================================ROUTES
+app.use('/', viewRouter);
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/reviews', reviewRouter);
