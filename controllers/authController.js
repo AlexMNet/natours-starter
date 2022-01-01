@@ -131,6 +131,33 @@ exports.protect = catchAsync(async (req, res, next) => {
   next();
 });
 
+//Only to check if user is logged in, for dynamic rendered pages
+exports.isLoggedIn = catchAsync(async (req, res, next) => {
+  if (req.cookies.jwt) {
+    //verify token
+    const decoded = await promisify(jwt.verify)(
+      req.cookies.jwt,
+      process.env.JWT_SECRET
+    );
+    //If successful check if user still exists
+    const freshUser = await User.findById(decoded.id);
+    if (!freshUser) {
+      return next();
+    }
+
+    //check if user changed password after the JWT was issued
+    if (freshUser.changedPasswordAfter(decoded.iat)) {
+      return next();
+    }
+
+    //There is a logged in user!    req.user = freshUser;
+    //make user available to templates
+    res.locals.user = freshUser;
+    return next();
+  }
+  next();
+});
+
 exports.restrictTo = (...roles) => {
   return (req, res, next) => {
     //roles ['admin', 'lead-guide'] role='user'
