@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const hpp = require('hpp');
+const cookieParser = require('cookie-parser');
 const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
 const tourRouter = require('./routes/tourRoutes');
@@ -30,7 +31,8 @@ app.use(helmet());
 // Further HELMET configuration for Security Policy (CSP)
 const scriptSrcUrls = [
   'https://api.tiles.mapbox.com/',
-  'https://api.mapbox.com/'
+  'https://api.mapbox.com/',
+  'https://cdnjs.cloudflare.com/ajax/libs/axios/0.24.0/axios.min.js'
 ];
 const styleSrcUrls = [
   'https://api.mapbox.com/',
@@ -41,7 +43,8 @@ const connectSrcUrls = [
   'https://api.mapbox.com/',
   'https://a.tiles.mapbox.com/',
   'https://b.tiles.mapbox.com/',
-  'https://events.mapbox.com/'
+  'https://events.mapbox.com/',
+  'ws://localhost:57409/'
 ];
 const fontSrcUrls = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 app.use(
@@ -77,6 +80,7 @@ app.use('/api', limiter);
 
 //Middleware to create req.body Limit how much can be passed into the body. Set to 10kb
 app.use(express.json({ limit: '10kb' }));
+app.use(cookieParser());
 
 //Data sanitization against NoSQL query injection
 app.use(mongoSanitize());
@@ -105,6 +109,7 @@ app.use((req, res, next) => {
 //Test middleware
 app.use((req, res, next) => {
   req.requestTime = new Date().toISOString();
+  console.log(req.cookies);
   next();
 });
 

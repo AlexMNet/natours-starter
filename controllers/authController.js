@@ -12,22 +12,22 @@ const signToken = id => {
   });
 };
 
-const cookieOptions = {
-  expires: new Date(
-    Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
-  ),
-  //Cookie will only be sent on an encrypted conncection HTTPS
-  // secure: true,
-  //cookie will not be able to be modified or accessed by the browser helps prevent XSS attacks
-  httpOnly: true
-};
-
-if (process.env.NODE_ENV === 'production') cookieOptions.secure = true;
-
 const createSendToken = (user, statusCode, res) => {
   const token = signToken(user._id);
 
-  res.cookie('jwt', cookieOptions, token);
+  const cookieOptions = {
+    expires: new Date(
+      Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
+    ),
+    //Cookie will only be sent on an encrypted conncection HTTPS
+    // secure: true,
+    //cookie will not be able to be modified or accessed by the browser helps prevent XSS attacks
+    httpOnly: true
+  };
+
+  if (process.env.NODE_ENV === 'production') cookieOptions.secure = true;
+
+  res.cookie('jwt', token, cookieOptions);
 
   //Remove password from response output
   user.password = undefined;
@@ -100,6 +100,8 @@ exports.protect = catchAsync(async (req, res, next) => {
     req.headers.authorization.startsWith('Bearer')
   ) {
     token = req.headers.authorization.split(' ')[1];
+  } else if (req.cookies.jwt) {
+    token = req.cookies.jwt;
   }
 
   if (!token) {
@@ -126,6 +128,33 @@ exports.protect = catchAsync(async (req, res, next) => {
 
   //Grant access to protected route!
   req.user = freshUser;
+  next();
+});
+
+//Only to check if user is logged in, for dynamic rendered pages
+exports.isLoggedIn = catchAsync(async (req, res, next) => {
+  if (req.cookies.jwt) {
+    //verify token
+    const decoded = await promisify(jwt.verify)(
+      req.cookies.jwt,
+      process.env.JWT_SECRET
+    );
+    //If successful check if user still exists
+    const freshUser = await User.findById(decoded.id);
+    if (!freshUser) {
+      return next();
+    }
+
+    //check if user changed password after the JWT was issued
+    if (freshUser.changedPasswordAfter(decoded.iat)) {
+      return next();
+    }
+
+    //There is a logged in user!    req.user = freshUser;
+    //make user available to templates
+    res.locals.user = freshUser;
+    return next();
+  }
   next();
 });
 
