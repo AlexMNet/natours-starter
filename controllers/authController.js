@@ -81,6 +81,8 @@ exports.login = catchAsync(async (req, res, next) => {
   createSendToken(user, 200, res);
 });
 
+//Since we cannot distroy or alter cookies,
+//for logging out we can just send a new one with no valid token
 exports.logout = catchAsync(async (req, res, next) => {
   res.cookie('jwt', 'loggedout', {
     expires: new Date(Date.now() + 10 * 1000),
@@ -128,35 +130,42 @@ exports.protect = catchAsync(async (req, res, next) => {
 
   //Grant access to protected route!
   req.user = freshUser;
+  res.locals.user = freshUser;
   next();
 });
 
 //Only to check if user is logged in, for dynamic rendered pages
-exports.isLoggedIn = catchAsync(async (req, res, next) => {
+//Do not use catchAsync here becuase we don't want errors thrown
+//In the global error handler for logging out
+exports.isLoggedIn = async (req, res, next) => {
   if (req.cookies.jwt) {
-    //verify token
-    const decoded = await promisify(jwt.verify)(
-      req.cookies.jwt,
-      process.env.JWT_SECRET
-    );
-    //If successful check if user still exists
-    const freshUser = await User.findById(decoded.id);
-    if (!freshUser) {
+    try {
+      //verify token
+      const decoded = await promisify(jwt.verify)(
+        req.cookies.jwt,
+        process.env.JWT_SECRET
+      );
+      //If successful check if user still exists
+      const freshUser = await User.findById(decoded.id);
+      if (!freshUser) {
+        return next();
+      }
+
+      //check if user changed password after the JWT was issued
+      if (freshUser.changedPasswordAfter(decoded.iat)) {
+        return next();
+      }
+
+      //There is a logged in user!    req.user = freshUser;
+      //make user available to templates
+      res.locals.user = freshUser;
+      return next();
+    } catch (err) {
       return next();
     }
-
-    //check if user changed password after the JWT was issued
-    if (freshUser.changedPasswordAfter(decoded.iat)) {
-      return next();
-    }
-
-    //There is a logged in user!    req.user = freshUser;
-    //make user available to templates
-    res.locals.user = freshUser;
-    return next();
   }
   next();
-});
+};
 
 exports.restrictTo = (...roles) => {
   return (req, res, next) => {
